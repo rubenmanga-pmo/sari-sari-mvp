@@ -1,37 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-const initialProducts = [
-  { id: 1, name: 'Coke 500ml', price: 25, stock: 48, category: 'Drinks', lowStock: 10 },
-  { id: 2, name: 'Sprite 500ml', price: 25, stock: 32, category: 'Drinks', lowStock: 10 },
-  { id: 3, name: 'Lucky Me Pancit Canton', price: 12, stock: 85, category: 'Noodles', lowStock: 20 },
-  { id: 4, name: 'Lucky Me Instant Mami', price: 10, stock: 60, category: 'Noodles', lowStock: 20 },
-  { id: 5, name: 'Cigarettes (per stick)', price: 8, stock: 120, category: 'Others', lowStock: 30 },
-  { id: 6, name: 'Bear Brand Sterilized', price: 18, stock: 25, category: 'Drinks', lowStock: 10 },
-  { id: 7, name: 'Chippy', price: 12, stock: 40, category: 'Snacks', lowStock: 15 },
-  { id: 8, name: 'Nova', price: 12, stock: 18, category: 'Snacks', lowStock: 15 },
-  { id: 9, name: 'Kopiko Brown', price: 8, stock: 55, category: 'Drinks', lowStock: 15 },
-  { id: 10, name: 'Nescafe Classic', price: 8, stock: 7, category: 'Drinks', lowStock: 15 },
-];
+type Product = {
+  id: number;
+  name: string;
+  price: number;
+  category: string;
+  stock: number;
+  lowStock: number;
+};
 
 export default function Inventory() {
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/products')
+      .then((res) => res.json())
+      .then((data) => {
+        setProducts(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
   const filtered = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const updateStock = (id: number, delta: number) => {
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, stock: Math.max(0, p.stock + delta) } : p
-      )
-    );
-  };
-
   const lowStockCount = products.filter((p) => p.stock <= p.lowStock).length;
+
+  if (loading) {
+    return <div className="text-center py-10 text-gray-500">Loading inventory...</div>;
+  }
 
   return (
     <div className="space-y-5 pb-10">
@@ -69,7 +72,7 @@ export default function Inventory() {
                 isLow ? 'border-red-300' : 'border-gray-100'
               }`}
             >
-              <div className="flex justify-between items-start mb-2">
+              <div className="flex justify-between items-start">
                 <div>
                   <div className="font-medium">{product.name}</div>
                   <div className="text-sm text-gray-500">
@@ -80,34 +83,15 @@ export default function Inventory() {
                   {product.stock}
                 </div>
               </div>
-
-              <div className="flex items-center gap-3 mt-3">
-                <button
-                  onClick={() => updateStock(product.id, -1)}
-                  className="w-10 h-10 rounded-full bg-gray-100 text-xl font-bold"
-                >
-                  −
-                </button>
-                <button
-                  onClick={() => updateStock(product.id, 1)}
-                  className="w-10 h-10 rounded-full bg-gray-100 text-xl font-bold"
-                >
-                  +
-                </button>
-                <button
-                  onClick={() => updateStock(product.id, 10)}
-                  className="ml-auto px-4 py-2 bg-green-100 text-green-700 rounded-xl text-sm font-medium"
-                >
-                  +10
-                </button>
-              </div>
             </div>
           );
         })}
       </div>
 
       {filtered.length === 0 && (
-        <p className="text-center text-gray-400 py-10">Walang nahanap</p>
+        <p className="text-center text-gray-400 py-10">
+          {products.length === 0 ? 'Walang products sa Google Sheet' : 'Walang nahanap'}
+        </p>
       )}
     </div>
   );
