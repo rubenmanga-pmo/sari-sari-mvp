@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Dashboard from '@/components/Dashboard';
 import SellPOS from '@/components/SellPOS';
+import Inventory from '@/components/Inventory';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'sell' | 'inventory' | 'credit'>('dashboard');
@@ -37,8 +38,10 @@ export default function Home() {
       <main className="p-4 max-w-md mx-auto pb-20">
         {activeTab === 'dashboard' && <Dashboard />}
         {activeTab === 'sell' && <SellPOS />}
-        {activeTab === 'inventory' && <div className="p-8 text-center text-gray-500">Inventory Module Coming Soon</div>}
-        {activeTab === 'credit' && <div className="p-8 text-center text-gray-500">Credit Module Coming Soon</div>}
+        {activeTab === 'inventory' && <Inventory />}
+        {activeTab === 'credit' && (
+          <div className="p-8 text-center text-gray-500">Credit Module Coming Soon</div>
+        )}
       </main>
     </div>
   );
