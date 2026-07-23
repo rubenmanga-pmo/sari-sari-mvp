@@ -1,34 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-const sampleProducts = [
-  { id: 1, name: 'Coke 500ml', price: 25, category: 'Drinks' },
-  { id: 2, name: 'Sprite 500ml', price: 25, category: 'Drinks' },
-  { id: 3, name: 'Lucky Me Pancit Canton', price: 12, category: 'Noodles' },
-  { id: 4, name: 'Lucky Me Instant Mami', price: 10, category: 'Noodles' },
-  { id: 5, name: 'Cigarettes (per stick)', price: 8, category: 'Others' },
-  { id: 6, name: 'Bear Brand Sterilized', price: 18, category: 'Drinks' },
-  { id: 7, name: 'Chippy', price: 12, category: 'Snacks' },
-  { id: 8, name: 'Nova', price: 12, category: 'Snacks' },
-  { id: 9, name: 'Kopiko Brown', price: 8, category: 'Drinks' },
-  { id: 10, name: 'Nescafe Classic', price: 8, category: 'Drinks' },
-];
+type Product = {
+  id: number;
+  name: string;
+  price: number;
+  category: string;
+  stock: number;
+  lowStock: number;
+};
 
 const categories = ['All', 'Drinks', 'Noodles', 'Snacks', 'Others'];
 
 export default function SellPOS() {
+  const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [cart, setCart] = useState<{ id: number; name: string; price: number; quantity: number }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [customerName, setCustomerName] = useState('');
 
-  const filteredProducts = sampleProducts.filter((p) => {
+  useEffect(() => {
+    fetch('/api/products')
+      .then((res) => res.json())
+      .then((data) => setProducts(data))
+      .catch(console.error);
+  }, []);
+
+  const filteredProducts = products.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const addToCart = (product: typeof sampleProducts[0]) => {
+  const addToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
@@ -36,7 +42,7 @@ export default function SellPOS() {
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { id: product.id, name: product.name, price: product.price, quantity: 1 }];
     });
   };
 
@@ -51,7 +57,46 @@ export default function SellPOS() {
   };
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const clearCart = () => setCart([]);
+  const clearCart = () => {
+    setCart([]);
+    setCustomerName('');
+  };
+
+  const recordSale = async (type: 'cash' | 'credit') => {
+    if (cart.length === 0) return;
+    if (type === 'credit' && !customerName.trim()) {
+      alert('Please enter customer name for credit sale');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cart,
+          type,
+          customerName: type === 'credit' ? customerName : undefined,
+        }),
+      });
+
+      if (res.ok) {
+        alert(`${type === 'cash' ? 'Cash' : 'Credit'} Sale recorded!\nTotal: ₱${total}`);
+        clearCart();
+        // Refresh products to update stock
+        const updated = await fetch('/api/products').then((r) => r.json());
+        setProducts(updated);
+      } else {
+        alert('Failed to record sale. Please try again.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error recording sale');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-5 pb-28">
@@ -87,10 +132,16 @@ export default function SellPOS() {
           <button
             key={product.id}
             onClick={() => addToCart(product)}
-            className="bg-white border-2 border-gray-100 hover:border-green-400 active:scale-95 rounded-2xl p-4 text-left transition-all shadow-sm"
+            disabled={product.stock <= 0}
+            className={`bg-white border-2 rounded-2xl p-4 text-left transition-all shadow-sm ${
+              product.stock <= 0
+                ? 'border-gray-200 opacity-50 cursor-not-allowed'
+                : 'border-gray-100 hover:border-green-400 active:scale-95'
+            }`}
           >
             <div className="font-medium text-sm leading-tight">{product.name}</div>
             <div className="text-green-600 font-bold mt-1">₱{product.price}</div>
+            <div className="text-xs text-gray-400 mt-1">Stock: {product.stock}</div>
           </button>
         ))}
       </div>
@@ -138,6 +189,15 @@ export default function SellPOS() {
             </div>
           ))}
 
+          {/* Customer name for credit */}
+          <input
+            type="text"
+            placeholder="Customer name (for Credit sale)"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            className="w-full p-3 border border-gray-200 rounded-xl text-sm"
+          />
+
           <div className="border-t pt-3 flex justify-between items-center font-bold text-lg">
             <span>Total</span>
             <span className="text-green-600">₱{total}</span>
@@ -149,22 +209,18 @@ export default function SellPOS() {
       {cart.length > 0 && (
         <div className="fixed bottom-4 left-4 right-4 max-w-md mx-auto flex gap-3">
           <button
-            onClick={() => {
-              alert(`Cash Sale recorded!\nTotal: ₱${total}`);
-              clearCart();
-            }}
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl font-semibold active:scale-95 transition-all"
+            onClick={() => recordSale('cash')}
+            disabled={loading}
+            className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-4 rounded-2xl font-semibold active:scale-95 transition-all"
           >
-            Cash Sale
+            {loading ? 'Saving...' : 'Cash Sale'}
           </button>
           <button
-            onClick={() => {
-              alert(`Credit Sale recorded!\nTotal: ₱${total}`);
-              clearCart();
-            }}
-            className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-4 rounded-2xl font-semibold active:scale-95 transition-all"
+            onClick={() => recordSale('credit')}
+            disabled={loading}
+            className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-400 text-white py-4 rounded-2xl font-semibold active:scale-95 transition-all"
           >
-            Credit Sale
+            {loading ? 'Saving...' : 'Credit Sale'}
           </button>
         </div>
       )}
