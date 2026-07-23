@@ -15,13 +15,18 @@ const sampleProducts = [
   { id: 10, name: 'Nescafe Classic', price: 8, category: 'Drinks' },
 ];
 
+const categories = ['All', 'Drinks', 'Noodles', 'Snacks', 'Others'];
+
 export default function SellPOS() {
   const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [cart, setCart] = useState<{ id: number; name: string; price: number; quantity: number }[]>([]);
 
-  const filteredProducts = sampleProducts.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredProducts = sampleProducts.filter((p) => {
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   const addToCart = (product: typeof sampleProducts[0]) => {
     setCart((prev) => {
@@ -46,11 +51,11 @@ export default function SellPOS() {
   };
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
   const clearCart = () => setCart([]);
 
   return (
     <div className="space-y-5 pb-28">
+      {/* Search */}
       <input
         type="text"
         placeholder="Hanapin ang produkto..."
@@ -59,6 +64,24 @@ export default function SellPOS() {
         className="w-full p-4 text-base border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-green-500"
       />
 
+      {/* Category Filter */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setSelectedCategory(cat)}
+            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+              selectedCategory === cat
+                ? 'bg-green-600 text-white'
+                : 'bg-white border border-gray-200 text-gray-600'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Product Grid */}
       <div className="grid grid-cols-2 gap-3">
         {filteredProducts.map((product) => (
           <button
@@ -72,6 +95,11 @@ export default function SellPOS() {
         ))}
       </div>
 
+      {filteredProducts.length === 0 && (
+        <p className="text-center text-gray-400 py-8">Walang nahanap na produkto</p>
+      )}
+
+      {/* Cart */}
       {cart.length > 0 && (
         <div className="bg-white rounded-2xl shadow border p-4 space-y-3">
           <div className="flex justify-between items-center">
@@ -117,6 +145,7 @@ export default function SellPOS() {
         </div>
       )}
 
+      {/* Action Buttons */}
       {cart.length > 0 && (
         <div className="fixed bottom-4 left-4 right-4 max-w-md mx-auto flex gap-3">
           <button
