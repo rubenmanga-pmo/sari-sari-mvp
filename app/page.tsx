@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Dashboard from '@/components/Dashboard';
 import SellPOS from '@/components/SellPOS';
 import Inventory from '@/components/Inventory';
+import Credit from '@/components/Credit';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'sell' | 'inventory' | 'credit'>('dashboard');
@@ -39,9 +40,7 @@ export default function Home() {
         {activeTab === 'dashboard' && <Dashboard />}
         {activeTab === 'sell' && <SellPOS />}
         {activeTab === 'inventory' && <Inventory />}
-        {activeTab === 'credit' && (
-          <div className="p-8 text-center text-gray-500">Credit Module Coming Soon</div>
-        )}
+        {activeTab === 'credit' && <Credit />}
       </main>
     </div>
   );
