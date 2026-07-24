@@ -259,3 +259,26 @@ export async function addProduct(product: {
 
   return { success: true, id: nextId };
 }
+export async function getSalesHistory() {
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'Sales!A2:J',
+  });
+
+  const rows = response.data.values || [];
+
+  return rows
+    .map((row) => ({
+      id: row[0],
+      date: row[1] ? row[1].substring(0, 16).replace('T', ' ') : '',
+      productId: Number(row[2]),
+      productName: row[3],
+      quantity: Number(row[4]),
+      price: Number(row[5]),
+      total: Number(row[6]),
+      type: row[7], // cash or credit
+      customerName: row[8] || '',
+      staff: row[9] || '',
+    }))
+    .reverse(); // newest first
+}
