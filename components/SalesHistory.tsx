@@ -36,15 +36,17 @@ export default function SalesHistory() {
   const totalAmount = filteredSales.reduce((sum, s) => sum + s.total, 0);
 
   if (loading) {
-    return <div className="text-center py-10 text-gray-500">Loading sales history...</div>;
+    return <div className="text-center py-16 text-gray-400">Loading...</div>;
   }
 
   return (
-    <div className="space-y-5 pb-10">
+    <div className="space-y-4 pb-6">
       {/* Summary */}
-      <div className="bg-white rounded-2xl p-4 shadow border">
-        <p className="text-sm text-gray-500">Total ({filter === 'all' ? 'All' : filter})</p>
-        <p className="text-2xl font-bold text-green-600">
+      <div className="bg-white rounded-2xl p-5 shadow-sm">
+        <p className="text-sm text-gray-500">
+          Total ({filter === 'all' ? 'All' : filter})
+        </p>
+        <p className="text-2xl font-bold text-green-600 mt-1">
           ₱{totalAmount.toLocaleString()}
         </p>
         <p className="text-sm text-gray-400 mt-1">
@@ -58,10 +60,10 @@ export default function SalesHistory() {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-full text-sm font-medium capitalize ${
+            className={`px-4 py-2 rounded-full text-sm font-medium capitalize transition-all ${
               filter === f
-                ? 'bg-green-600 text-white'
-                : 'bg-white border border-gray-200 text-gray-600'
+                ? 'bg-green-600 text-white shadow-sm'
+                : 'bg-white text-gray-600 border border-gray-200'
             }`}
           >
             {f}
@@ -72,23 +74,23 @@ export default function SalesHistory() {
       {/* Sales List */}
       <div className="space-y-3">
         {filteredSales.map((sale) => (
-          <div key={sale.id} className="bg-white rounded-2xl p-4 shadow border">
+          <div key={sale.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex justify-between items-start">
-              <div>
-                <div className="font-medium">{sale.productName}</div>
-                <div className="text-sm text-gray-500">
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-gray-800">{sale.productName}</div>
+                <div className="text-sm text-gray-500 mt-0.5">
                   {sale.quantity} × ₱{sale.price}
                   {sale.customerName && ` · ${sale.customerName}`}
                 </div>
                 <div className="text-xs text-gray-400 mt-1">{sale.date}</div>
               </div>
-              <div className="text-right">
-                <div className="font-bold">₱{sale.total.toLocaleString()}</div>
+              <div className="text-right ml-3">
+                <div className="font-bold text-gray-800">₱{sale.total.toLocaleString()}</div>
                 <div
-                  className={`text-xs mt-1 px-2 py-0.5 rounded-full inline-block ${
+                  className={`text-xs mt-1 px-2.5 py-0.5 rounded-full inline-block font-medium ${
                     sale.type === 'cash'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-amber-100 text-amber-700'
+                      ? 'bg-green-50 text-green-700'
+                      : 'bg-amber-50 text-amber-700'
                   }`}
                 >
                   {sale.type}
