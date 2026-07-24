@@ -16,7 +16,7 @@ type Sale = {
 export default function SalesHistory() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'cash' | 'credit'>('all');
+  const [filter, setFilter] = useState<'all' | 'cash' | 'gcash' | 'credit'>('all');
 
   useEffect(() => {
     fetch('/api/sales-history')
@@ -55,22 +55,21 @@ export default function SalesHistory() {
       </div>
 
       {/* Filter */}
-      <div className="flex gap-2">
-        {(['all', 'cash', 'credit'] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-full text-sm font-medium capitalize transition-all ${
-              filter === f
-                ? 'bg-green-600 text-white shadow-sm'
-                : 'bg-white text-gray-600 border border-gray-200'
-            }`}
-          >
-            {f}
-          </button>
-        ))}
-      </div>
-
+<div className="flex gap-2 overflow-x-auto no-scrollbar">
+  {(['all', 'cash', 'gcash', 'credit'] as const).map((f) => (
+    <button
+      key={f}
+      onClick={() => setFilter(f)}
+      className={`px-4 py-2 rounded-full text-sm font-medium capitalize whitespace-nowrap transition-all ${
+        filter === f
+          ? 'bg-green-600 text-white shadow-sm'
+          : 'bg-white text-gray-600 border border-gray-200'
+      }`}
+    >
+      {f}
+    </button>
+  ))}
+</div>
       {/* Sales List */}
       <div className="space-y-3">
         {filteredSales.map((sale) => (
