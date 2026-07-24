@@ -19,6 +19,8 @@ export default function CashFlow() {
   const [entries, setEntries] = useState<CashFlowEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'in' | 'out'>('all');
+
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<'in' | 'out'>('out');
   const [formCategory, setFormCategory] = useState('Purchases');
@@ -82,8 +84,20 @@ export default function CashFlow() {
     }
   };
 
-  const totalIn = entries.filter((e) => e.type === 'in').reduce((sum, e) => sum + e.amount, 0);
-  const totalOut = entries.filter((e) => e.type === 'out').reduce((sum, e) => sum + e.amount, 0);
+  const filteredEntries = entries.filter((e) => {
+    if (filter === 'all') return true;
+    return e.type === filter;
+  });
+
+  const totalIn = entries
+    .filter((e) => e.type === 'in')
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const totalOut = entries
+    .filter((e) => e.type === 'out')
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const netCash = totalIn - totalOut;
 
   if (loading) {
     return <div className="text-center py-16 text-gray-400">Loading...</div>;
@@ -91,15 +105,25 @@ export default function CashFlow() {
 
   return (
     <div className="space-y-4 pb-6">
-      {/* Summary */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
-          <p className="text-sm text-gray-500">Cash In</p>
-          <p className="text-xl font-bold text-green-600 mt-1">₱{totalIn.toLocaleString()}</p>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-white rounded-2xl p-3 shadow-sm text-center">
+          <p className="text-xs text-gray-500">Cash In</p>
+          <p className="text-lg font-bold text-green-600 mt-1">
+            ₱{totalIn.toLocaleString()}
+          </p>
         </div>
-        <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
-          <p className="text-sm text-gray-500">Cash Out</p>
-          <p className="text-xl font-bold text-red-500 mt-1">₱{totalOut.toLocaleString()}</p>
+        <div className="bg-white rounded-2xl p-3 shadow-sm text-center">
+          <p className="text-xs text-gray-500">Cash Out</p>
+          <p className="text-lg font-bold text-red-500 mt-1">
+            ₱{totalOut.toLocaleString()}
+          </p>
+        </div>
+        <div className="bg-white rounded-2xl p-3 shadow-sm text-center">
+          <p className="text-xs text-gray-500">Net</p>
+          <p className={`text-lg font-bold mt-1 ${netCash >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+            ₱{netCash.toLocaleString()}
+          </p>
         </div>
       </div>
 
@@ -107,40 +131,84 @@ export default function CashFlow() {
       <div className="grid grid-cols-2 gap-3">
         <button
           onClick={() => openForm('in')}
-          className="py-3.5 bg-green-600 text-white rounded-2xl font-medium shadow-sm"
+          className="py-3.5 bg-green-600 text-white rounded-2xl font-medium shadow-sm active:scale-[0.98] transition"
         >
           + Cash In
         </button>
         <button
           onClick={() => openForm('out')}
-          className="py-3.5 bg-red-500 text-white rounded-2xl font-medium shadow-sm"
+          className="py-3.5 bg-red-500 text-white rounded-2xl font-medium shadow-sm active:scale-[0.98] transition"
         >
           + Cash Out
         </button>
       </div>
 
-      {/* Recent Entries */}
+      {/* Filter */}
+      <div className="flex bg-white rounded-2xl p-1 shadow-sm">
+        {([
+          { key: 'all', label: 'All' },
+          { key: 'in', label: 'Cash In' },
+          { key: 'out', label: 'Cash Out' },
+        ] as const).map((item) => (
+          <button
+            key={item.key}
+            onClick={() => setFilter(item.key)}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition ${
+              filter === item.key
+                ? 'bg-green-600 text-white'
+                : 'text-gray-500'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Entries List */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-gray-700">Recent Transactions</h3>
-        {entries.slice(0, 20).map((entry) => (
-          <div key={entry.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+        {filteredEntries.map((entry) => (
+          <div
+            key={entry.id}
+            className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100"
+          >
             <div className="flex justify-between items-start">
-              <div>
+              <div className="flex-1 min-w-0">
                 <div className="font-medium text-gray-800">{entry.category}</div>
-                <div className="text-sm text-gray-500 mt-0.5">
-                  {entry.notes || entry.date}
-                </div>
+                {entry.notes && (
+                  <div className="text-sm text-gray-500 mt-0.5 truncate">
+                    {entry.notes}
+                  </div>
+                )}
+                <div className="text-xs text-gray-400 mt-1">{entry.date}</div>
               </div>
-              <div className={`font-bold ${entry.type === 'in' ? 'text-green-600' : 'text-red-500'}`}>
-                {entry.type === 'in' ? '+' : '-'}₱{entry.amount.toLocaleString()}
+              <div className="text-right ml-3">
+                <div
+                  className={`font-bold ${
+                    entry.type === 'in' ? 'text-green-600' : 'text-red-500'
+                  }`}
+                >
+                  {entry.type === 'in' ? '+' : '-'}₱
+                  {entry.amount.toLocaleString()}
+                </div>
+                <div
+                  className={`text-xs mt-1 px-2 py-0.5 rounded-full inline-block font-medium ${
+                    entry.type === 'in'
+                      ? 'bg-green-50 text-green-700'
+                      : 'bg-red-50 text-red-600'
+                  }`}
+                >
+                  {entry.type === 'in' ? 'In' : 'Out'}
+                </div>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {entries.length === 0 && (
-        <p className="text-center text-gray-400 py-10">Walang cash flow records</p>
+      {filteredEntries.length === 0 && (
+        <p className="text-center text-gray-400 py-10">
+          Walang {filter === 'all' ? '' : filter === 'in' ? 'Cash In' : 'Cash Out'} records
+        </p>
       )}
 
       {/* Form Modal */}
@@ -159,7 +227,9 @@ export default function CashFlow() {
                 className="w-full p-3.5 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 {(formType === 'out' ? OUT_CATEGORIES : IN_CATEGORIES).map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
                 ))}
               </select>
             </div>
