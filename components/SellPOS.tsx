@@ -63,7 +63,7 @@ export default function SellPOS() {
     setCustomerName('');
   };
 
-  const recordSale = async (type: 'cash' | 'credit') => {
+  const recordSale = async (type: 'cash' | 'gcash' | 'credit') => {
     if (cart.length === 0) return;
     if (type === 'credit' && !customerName.trim()) {
       alert('Please enter customer name for credit sale');
