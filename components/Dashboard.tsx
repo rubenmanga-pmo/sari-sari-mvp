@@ -1,29 +1,63 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+
 export default function Dashboard() {
+  const [stats, setStats] = useState({
+    todaySales: 0,
+    todayTransactions: 0,
+    totalCredit: 0,
+    lowStockCount: 0,
+    totalProducts: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/dashboard')
+      .then((res) => res.json())
+      .then((data) => {
+        setStats(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return <div className="text-center py-10 text-gray-500">Loading dashboard...</div>;
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-2xl shadow">
-        <h2 className="text-xl font-semibold mb-4">Today&apos;s Summary</h2>
-        <div className="grid grid-cols-2 gap-4 text-center">
-          <div className="bg-green-50 p-4 rounded-xl">
-            <p className="text-sm text-gray-500">Total Sales</p>
-            <p className="text-3xl font-bold text-green-600">₱2,450</p>
-          </div>
-          <div className="bg-orange-50 p-4 rounded-xl">
-            <p className="text-sm text-gray-500">Credit</p>
-            <p className="text-3xl font-bold text-orange-600">₱18,200</p>
-          </div>
-        </div>
+    <div className="space-y-5">
+      {/* Today's Sales */}
+      <div className="bg-white rounded-2xl p-5 shadow border">
+        <p className="text-sm text-gray-500 mb-1">Today's Sales</p>
+        <p className="text-3xl font-bold text-green-600">
+          ₱{stats.todaySales.toLocaleString()}
+        </p>
+        <p className="text-sm text-gray-400 mt-1">
+          {stats.todayTransactions} transaction{stats.todayTransactions !== 1 ? 's' : ''}
+        </p>
       </div>
-      
-      <div className="bg-white p-6 rounded-2xl shadow">
-        <h3 className="font-semibold mb-3">Low Stock Alerts</h3>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center p-3 bg-red-50 rounded-xl text-red-600">
-            <span>Coke 500ml</span>
-            <span className="font-medium">5 left</span>
-          </div>
+
+      {/* Outstanding Credit */}
+      <div className="bg-white rounded-2xl p-5 shadow border">
+        <p className="text-sm text-gray-500 mb-1">Outstanding Credit</p>
+        <p className="text-3xl font-bold text-amber-600">
+          ₱{stats.totalCredit.toLocaleString()}
+        </p>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl p-4 shadow border text-center">
+          <p className="text-sm text-gray-500">Products</p>
+          <p className="text-2xl font-bold">{stats.totalProducts}</p>
+        </div>
+        <div className="bg-white rounded-2xl p-4 shadow border text-center">
+          <p className="text-sm text-gray-500">Low Stock</p>
+          <p className={`text-2xl font-bold ${stats.lowStockCount > 0 ? 'text-red-500' : 'text-green-600'}`}>
+            {stats.lowStockCount}
+          </p>
         </div>
       </div>
     </div>
