@@ -46,7 +46,7 @@ export async function getCustomers() {
 
 export async function recordSale(sale: {
   items: { id: number; name: string; price: number; quantity: number }[];
-  type: 'cash' | 'credit';
+  type: 'cash' | 'gcash' | 'credit';
   customerName?: string;
 }) {
   const now = new Date().toISOString();
@@ -120,7 +120,6 @@ export async function recordPayment(payment: {
 }) {
   const now = new Date().toISOString().split('T')[0];
 
-  // 1. Add to Payments sheet
   await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
     range: 'Payments!A:F',
@@ -137,7 +136,6 @@ export async function recordPayment(payment: {
     },
   });
 
-  // 2. Update customer balance
   const customers = await getCustomers();
   const customer = customers.find((c) => c.id === payment.customerId);
 
@@ -152,7 +150,6 @@ export async function recordPayment(payment: {
       requestBody: { values: [[newBalance]] },
     });
 
-    // Also update last_payment date
     await sheets.spreadsheets.values.update({
       spreadsheetId: SHEET_ID,
       range: `Customers!E${rowIndex}`,
@@ -163,53 +160,14 @@ export async function recordPayment(payment: {
 
   return { success: true };
 }
-export async function getDashboardStats() {
-  // Get total outstanding credit
-  const customers = await getCustomers();
-  const totalCredit = customers.reduce((sum, c) => sum + c.balance, 0);
 
-  // Get today's sales
-  const salesResponse = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
-    range: 'Sales!A2:J',
-  });
-
-  const salesRows = salesResponse.data.values || [];
-  const today = new Date().toISOString().split('T')[0];
-
-  let todaySales = 0;
-  let todayTransactions = 0;
-
-  salesRows.forEach((row) => {
-    const saleDate = row[1] ? row[1].substring(0, 10) : '';
-    const total = Number(row[6]) || 0;
-
-    if (saleDate === today) {
-      todaySales += total;
-      todayTransactions += 1;
-    }
-  });
-
-  // Low stock count
-  const products = await getProducts();
-  const lowStockCount = products.filter((p) => p.stock <= p.lowStock).length;
-
-  return {
-    todaySales,
-    todayTransactions,
-    totalCredit,
-    lowStockCount,
-    totalProducts: products.length,
-  };
-}
 export async function addCustomer(customer: {
   name: string;
   phone?: string;
 }) {
-  // Get current customers to determine next ID
   const customers = await getCustomers();
-  const nextId = customers.length > 0 
-    ? Math.max(...customers.map(c => c.id)) + 1 
+  const nextId = customers.length > 0
+    ? Math.max(...customers.map(c => c.id)) + 1
     : 1;
 
   await sheets.spreadsheets.values.append({
@@ -221,14 +179,15 @@ export async function addCustomer(customer: {
         nextId,
         customer.name,
         customer.phone || '',
-        0,           // starting balance
-        '',          // last_payment
+        0,
+        '',
       ]],
     },
   });
 
   return { success: true, id: nextId };
 }
+
 export async function addProduct(product: {
   name: string;
   price: number;
@@ -237,8 +196,8 @@ export async function addProduct(product: {
   lowStock?: number;
 }) {
   const products = await getProducts();
-  const nextId = products.length > 0 
-    ? Math.max(...products.map(p => p.id)) + 1 
+  const nextId = products.length > 0
+    ? Math.max(...products.map(p => p.id)) + 1
     : 1;
 
   await sheets.spreadsheets.values.append({
@@ -259,6 +218,29 @@ export async function addProduct(product: {
 
   return { success: true, id: nextId };
 }
+
+export async function updateStock(productId: number, newStock: number) {
+  const products = await getProducts();
+  const productIndex = products.findIndex((p) => p.id === productId);
+
+  if (productIndex === -1) {
+    throw new Error('Product not found');
+  }
+
+  const rowIndex = productIndex + 2;
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range: `Products!E${rowIndex}`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: {
+      values: [[Math.max(0, newStock)]],
+    },
+  });
+
+  return { success: true };
+}
+
 export async function getSalesHistory() {
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
@@ -276,30 +258,75 @@ export async function getSalesHistory() {
       quantity: Number(row[4]),
       price: Number(row[5]),
       total: Number(row[6]),
-      type: row[7], // cash or credit
+      type: row[7],
       customerName: row[8] || '',
       staff: row[9] || '',
     }))
-    .reverse(); // newest first
+    .reverse();
 }
-export async function updateStock(productId: number, newStock: number) {
-  const products = await getProducts();
-  const productIndex = products.findIndex((p) => p.id === productId);
 
-  if (productIndex === -1) {
-    throw new Error('Product not found');
-  }
+export async function getDashboardStats() {
+  const customers = await getCustomers();
+  const totalCredit = customers.reduce((sum, c) => sum + c.balance, 0);
 
-  const rowIndex = productIndex + 2; // +2 because of header row
-
-  await sheets.spreadsheets.values.update({
+  const salesResponse = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: `Products!E${rowIndex}`,
-    valueInputOption: 'USER_ENTERED',
-    requestBody: {
-      values: [[Math.max(0, newStock)]],
-    },
+    range: 'Sales!A2:J',
   });
 
-  return { success: true };
+  const salesRows = salesResponse.data.values || [];
+  const today = new Date().toISOString().split('T')[0];
+
+  // Calculate start of current week (Monday)
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - diffToMonday);
+  const weekStart = monday.toISOString().split('T')[0];
+
+  let todaySales = 0;
+  let todayTransactions = 0;
+  let weekSales = 0;
+  let weekTransactions = 0;
+
+  const paymentBreakdown = {
+    cash: 0,
+    gcash: 0,
+    credit: 0,
+  };
+
+  salesRows.forEach((row) => {
+    const saleDate = row[1] ? row[1].substring(0, 10) : '';
+    const total = Number(row[6]) || 0;
+    const type = (row[7] || 'cash').toLowerCase();
+
+    if (saleDate === today) {
+      todaySales += total;
+      todayTransactions += 1;
+    }
+
+    if (saleDate >= weekStart) {
+      weekSales += total;
+      weekTransactions += 1;
+
+      if (type === 'gcash') paymentBreakdown.gcash += total;
+      else if (type === 'credit') paymentBreakdown.credit += total;
+      else paymentBreakdown.cash += total;
+    }
+  });
+
+  const products = await getProducts();
+  const lowStockCount = products.filter((p) => p.stock <= p.lowStock).length;
+
+  return {
+    todaySales,
+    todayTransactions,
+    weekSales,
+    weekTransactions,
+    totalCredit,
+    lowStockCount,
+    totalProducts: products.length,
+    paymentBreakdown,
+  };
 }
