@@ -51,7 +51,6 @@ export async function recordSale(sale: {
 }) {
   const now = new Date().toISOString();
 
-  // 1. Write each item to Sales sheet
   const salesRows = sale.items.map((item) => [
     Date.now() + Math.random(),
     now,
@@ -69,33 +68,26 @@ export async function recordSale(sale: {
     spreadsheetId: SHEET_ID,
     range: 'Sales!A:J',
     valueInputOption: 'USER_ENTERED',
-    requestBody: {
-      values: salesRows,
-    },
+    requestBody: { values: salesRows },
   });
 
-  // 2. Update stock in Products sheet
   const products = await getProducts();
 
   for (const item of sale.items) {
     const product = products.find((p) => p.id === item.id);
     if (product) {
       const newStock = Math.max(0, product.stock - item.quantity);
-      // Find the row number (row index + 2 because of header)
       const rowIndex = products.findIndex((p) => p.id === item.id) + 2;
 
       await sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
         range: `Products!E${rowIndex}`,
         valueInputOption: 'USER_ENTERED',
-        requestBody: {
-          values: [[newStock]],
-        },
+        requestBody: { values: [[newStock]] },
       });
     }
   }
 
-  // 3. If credit sale, update customer balance
   if (sale.type === 'credit' && sale.customerName) {
     const customers = await getCustomers();
     const customer = customers.find(
@@ -112,11 +104,61 @@ export async function recordSale(sale: {
         spreadsheetId: SHEET_ID,
         range: `Customers!D${rowIndex}`,
         valueInputOption: 'USER_ENTERED',
-        requestBody: {
-          values: [[newBalance]],
-        },
+        requestBody: { values: [[newBalance]] },
       });
     }
+  }
+
+  return { success: true };
+}
+
+export async function recordPayment(payment: {
+  customerId: number;
+  customerName: string;
+  amount: number;
+  notes?: string;
+}) {
+  const now = new Date().toISOString().split('T')[0];
+
+  // 1. Add to Payments sheet
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: 'Payments!A:F',
+    valueInputOption: 'USER_ENTERED',
+    requestBody: {
+      values: [[
+        Date.now(),
+        now,
+        payment.customerId,
+        payment.customerName,
+        payment.amount,
+        payment.notes || '',
+      ]],
+    },
+  });
+
+  // 2. Update customer balance
+  const customers = await getCustomers();
+  const customer = customers.find((c) => c.id === payment.customerId);
+
+  if (customer) {
+    const newBalance = Math.max(0, customer.balance - payment.amount);
+    const rowIndex = customers.findIndex((c) => c.id === customer.id) + 2;
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `Customers!D${rowIndex}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [[newBalance]] },
+    });
+
+    // Also update last_payment date
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `Customers!E${rowIndex}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [[now]] },
+    });
   }
 
   return { success: true };
