@@ -282,3 +282,24 @@ export async function getSalesHistory() {
     }))
     .reverse(); // newest first
 }
+export async function updateStock(productId: number, newStock: number) {
+  const products = await getProducts();
+  const productIndex = products.findIndex((p) => p.id === productId);
+
+  if (productIndex === -1) {
+    throw new Error('Product not found');
+  }
+
+  const rowIndex = productIndex + 2; // +2 because of header row
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range: `Products!E${rowIndex}`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: {
+      values: [[Math.max(0, newStock)]],
+    },
+  });
+
+  return { success: true };
+}
