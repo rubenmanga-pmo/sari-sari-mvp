@@ -330,3 +330,43 @@ export async function getDashboardStats() {
     paymentBreakdown,
   };
 }
+export async function updateProduct(product: {
+  id: number;
+  name: string;
+  price: number;
+  category: string;
+  lowStock?: number;
+}) {
+  const products = await getProducts();
+  const productIndex = products.findIndex((p) => p.id === product.id);
+
+  if (productIndex === -1) {
+    throw new Error('Product not found');
+  }
+
+  const rowIndex = productIndex + 2;
+
+  // Update name, price, category (columns B, C, D)
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range: `Products!B${rowIndex}:D${rowIndex}`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: {
+      values: [[product.name, product.price, product.category]],
+    },
+  });
+
+  // Optionally update lowStock if provided
+  if (product.lowStock !== undefined) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `Products!F${rowIndex}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [[product.lowStock]],
+      },
+    });
+  }
+
+  return { success: true };
+}
