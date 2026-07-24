@@ -11,12 +11,24 @@ type Product = {
   lowStock: number;
 };
 
+const categories = ['Drinks', 'Noodles', 'Snacks', 'Others'];
+
 export default function Inventory() {
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  // Add Product form
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newPrice, setNewPrice] = useState('');
+  const [newCategory, setNewCategory] = useState('Drinks');
+  const [newStock, setNewStock] = useState('');
+  const [newLowStock, setNewLowStock] = useState('10');
+
+  const loadProducts = () => {
+    setLoading(true);
     fetch('/api/products')
       .then((res) => res.json())
       .then((data) => {
@@ -24,6 +36,10 @@ export default function Inventory() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadProducts();
   }, []);
 
   const filtered = products.filter((p) =>
@@ -31,6 +47,50 @@ export default function Inventory() {
   );
 
   const lowStockCount = products.filter((p) => p.stock <= p.lowStock).length;
+
+  const addNewProduct = async () => {
+    if (!newName.trim()) {
+      alert('Please enter product name');
+      return;
+    }
+    if (!newPrice || isNaN(Number(newPrice))) {
+      alert('Please enter a valid price');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newName.trim(),
+          price: Number(newPrice),
+          category: newCategory,
+          stock: Number(newStock) || 0,
+          lowStock: Number(newLowStock) || 10,
+        }),
+      });
+
+      if (res.ok) {
+        alert('Product added successfully!');
+        setNewName('');
+        setNewPrice('');
+        setNewCategory('Drinks');
+        setNewStock('');
+        setNewLowStock('10');
+        setShowAddForm(false);
+        loadProducts();
+      } else {
+        alert('Failed to add product');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error adding product');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return <div className="text-center py-10 text-gray-500">Loading inventory...</div>;
@@ -51,6 +111,14 @@ export default function Inventory() {
           </p>
         </div>
       </div>
+
+      {/* Add Product Button */}
+      <button
+        onClick={() => setShowAddForm(true)}
+        className="w-full py-3 bg-green-600 text-white rounded-2xl font-medium"
+      >
+        + Add New Product
+      </button>
 
       {/* Search */}
       <input
@@ -92,6 +160,83 @@ export default function Inventory() {
         <p className="text-center text-gray-400 py-10">
           {products.length === 0 ? 'Walang products sa Google Sheet' : 'Walang nahanap'}
         </p>
+      )}
+
+      {/* Add Product Modal */}
+      {showAddForm && (
+        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50">
+          <div className="bg-white w-full max-w-md rounded-t-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-bold">Add New Product</h3>
+
+            <input
+              type="text"
+              placeholder="Product Name *"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="w-full p-4 text-base border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-green-500"
+            />
+
+            <input
+              type="number"
+              placeholder="Price *"
+              value={newPrice}
+              onChange={(e) => setNewPrice(e.target.value)}
+              className="w-full p-4 text-base border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-green-500"
+            />
+
+            <div>
+              <label className="text-sm text-gray-500 mb-1 block">Category</label>
+              <select
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                className="w-full p-4 text-base border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-green-500"
+              >
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            <input
+              type="number"
+              placeholder="Starting Stock"
+              value={newStock}
+              onChange={(e) => setNewStock(e.target.value)}
+              className="w-full p-4 text-base border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-green-500"
+            />
+
+            <input
+              type="number"
+              placeholder="Low Stock Alert Level"
+              value={newLowStock}
+              onChange={(e) => setNewLowStock(e.target.value)}
+              className="w-full p-4 text-base border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-green-500"
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowAddForm(false);
+                  setNewName('');
+                  setNewPrice('');
+                  setNewCategory('Drinks');
+                  setNewStock('');
+                  setNewLowStock('10');
+                }}
+                className="flex-1 py-3 bg-gray-100 rounded-2xl font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addNewProduct}
+                disabled={saving}
+                className="flex-1 py-3 bg-green-600 text-white rounded-2xl font-medium disabled:bg-gray-400"
+              >
+                {saving ? 'Saving...' : 'Save Product'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
