@@ -202,3 +202,30 @@ export async function getDashboardStats() {
     totalProducts: products.length,
   };
 }
+export async function addCustomer(customer: {
+  name: string;
+  phone?: string;
+}) {
+  // Get current customers to determine next ID
+  const customers = await getCustomers();
+  const nextId = customers.length > 0 
+    ? Math.max(...customers.map(c => c.id)) + 1 
+    : 1;
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: 'Customers!A:E',
+    valueInputOption: 'USER_ENTERED',
+    requestBody: {
+      values: [[
+        nextId,
+        customer.name,
+        customer.phone || '',
+        0,           // starting balance
+        '',          // last_payment
+      ]],
+    },
+  });
+
+  return { success: true, id: nextId };
+}
