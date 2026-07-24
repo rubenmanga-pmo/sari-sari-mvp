@@ -4,5 +4,15 @@
 
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background-color: #f9fafb;
+  background-color: #f3f4f6;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Hide scrollbar for category filters */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
