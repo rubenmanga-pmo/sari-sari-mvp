@@ -229,3 +229,33 @@ export async function addCustomer(customer: {
 
   return { success: true, id: nextId };
 }
+export async function addProduct(product: {
+  name: string;
+  price: number;
+  category: string;
+  stock: number;
+  lowStock?: number;
+}) {
+  const products = await getProducts();
+  const nextId = products.length > 0 
+    ? Math.max(...products.map(p => p.id)) + 1 
+    : 1;
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: 'Products!A:F',
+    valueInputOption: 'USER_ENTERED',
+    requestBody: {
+      values: [[
+        nextId,
+        product.name,
+        product.price,
+        product.category,
+        product.stock,
+        product.lowStock || 10,
+      ]],
+    },
+  });
+
+  return { success: true, id: nextId };
+}
