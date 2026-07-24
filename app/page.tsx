@@ -10,41 +10,51 @@ import SalesHistory from '@/components/SalesHistory';
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'sell' | 'inventory' | 'credit' | 'history'>('dashboard');
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-green-600 text-white p-4 text-center">
-        <h1 className="text-2xl font-bold">Aling Maria Sari-Sari Store</h1>
-      </header>
-      
-      <nav className="flex border-b bg-white sticky top-0 z-10 overflow-x-auto">
-        {[
-          { key: 'dashboard', label: 'Dashboard' },
-          { key: 'sell', label: 'Magbenta' },
-          { key: 'inventory', label: 'Inventory' },
-          { key: 'credit', label: 'Credit' },
-          { key: 'history', label: 'History' }
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key as any)}
-            className={`flex-1 py-4 text-sm font-medium whitespace-nowrap px-3 transition-colors ${
-              activeTab === tab.key 
-                ? 'border-b-4 border-green-600 text-green-600' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+  const tabs = [
+    { key: 'dashboard', label: 'Home', icon: '🏠' },
+    { key: 'sell', label: 'Magbenta', icon: '🛒' },
+    { key: 'inventory', label: 'Stocks', icon: '📦' },
+    { key: 'credit', label: 'Credit', icon: '💳' },
+    { key: 'history', label: 'History', icon: '📋' },
+  ];
 
-      <main className="p-4 max-w-md mx-auto pb-20">
+  return (
+    <div className="min-h-screen bg-gray-100 pb-24">
+      {/* Header */}
+      <header className="bg-green-600 text-white px-4 py-4 sticky top-0 z-20 shadow-md">
+        <h1 className="text-xl font-bold text-center tracking-wide">
+          Aling Maria Sari-Sari
+        </h1>
+      </header>
+
+      {/* Main Content */}
+      <main className="p-4 max-w-md mx-auto">
         {activeTab === 'dashboard' && <Dashboard />}
         {activeTab === 'sell' && <SellPOS />}
         {activeTab === 'inventory' && <Inventory />}
         {activeTab === 'credit' && <Credit />}
         {activeTab === 'history' && <SalesHistory />}
       </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30">
+        <div className="max-w-md mx-auto flex">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key as any)}
+              className={`flex-1 flex flex-col items-center py-3 text-xs font-medium transition-colors ${
+                activeTab === tab.key
+                  ? 'text-green-600'
+                  : 'text-gray-400'
+              }`}
+            >
+              <span className="text-xl mb-0.5">{tab.icon}</span>
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }
