@@ -19,7 +19,9 @@ export default function CashFlow() {
   const [entries, setEntries] = useState<CashFlowEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'in' | 'out'>('all');
+
+  const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
 
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<'in' | 'out'>('out');
@@ -84,16 +86,38 @@ export default function CashFlow() {
     }
   };
 
+  // Date helpers
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+
+  const dayOfWeek = now.getDay();
+  const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - diffToMonday);
+  const weekStartStr = monday.toISOString().split('T')[0];
+
+  const monthStartStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+
   const filteredEntries = entries.filter((e) => {
-    if (filter === 'all') return true;
-    return e.type === filter;
+    // Type filter
+    if (typeFilter !== 'all' && e.type !== typeFilter) return false;
+
+    // Date filter
+    const entryDate = e.date ? e.date.substring(0, 10) : '';
+    if (!entryDate) return dateFilter === 'all';
+
+    if (dateFilter === 'today') return entryDate === todayStr;
+    if (dateFilter === 'week') return entryDate >= weekStartStr;
+    if (dateFilter === 'month') return entryDate >= monthStartStr;
+
+    return true; // all
   });
 
-  const totalIn = entries
+  const totalIn = filteredEntries
     .filter((e) => e.type === 'in')
     .reduce((sum, e) => sum + e.amount, 0);
 
-  const totalOut = entries
+  const totalOut = filteredEntries
     .filter((e) => e.type === 'out')
     .reduce((sum, e) => sum + e.amount, 0);
 
@@ -143,7 +167,27 @@ export default function CashFlow() {
         </button>
       </div>
 
-      {/* Filter */}
+      {/* Date Filter */}
+      <div className="flex bg-white rounded-2xl p-1 shadow-sm overflow-x-auto no-scrollbar">
+        {([
+          { key: 'all', label: 'All' },
+          { key: 'today', label: 'Today' },
+          { key: 'week', label: 'Week' },
+          { key: 'month', label: 'Month' },
+        ] as const).map((item) => (
+          <button
+            key={item.key}
+            onClick={() => setDateFilter(item.key)}
+            className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-medium whitespace-nowrap transition ${
+              dateFilter === item.key ? 'bg-green-600 text-white' : 'text-gray-500'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Type Filter */}
       <div className="flex bg-white rounded-2xl p-1 shadow-sm">
         {([
           { key: 'all', label: 'All' },
@@ -152,11 +196,9 @@ export default function CashFlow() {
         ] as const).map((item) => (
           <button
             key={item.key}
-            onClick={() => setFilter(item.key)}
+            onClick={() => setTypeFilter(item.key)}
             className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition ${
-              filter === item.key
-                ? 'bg-green-600 text-white'
-                : 'text-gray-500'
+              typeFilter === item.key ? 'bg-green-600 text-white' : 'text-gray-500'
             }`}
           >
             {item.label}
@@ -207,7 +249,7 @@ export default function CashFlow() {
 
       {filteredEntries.length === 0 && (
         <p className="text-center text-gray-400 py-10">
-          Walang {filter === 'all' ? '' : filter === 'in' ? 'Cash In' : 'Cash Out'} records
+          Walang records for the selected filters
         </p>
       )}
 
