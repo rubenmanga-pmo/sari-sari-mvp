@@ -204,25 +204,32 @@ export default function SellPOS() {
         </div>
       )}
 
-      {/* Action Buttons */}
-      {cart.length > 0 && (
-        <div className="fixed bottom-20 left-4 right-4 max-w-md mx-auto flex gap-3 z-20">
-          <button
-            onClick={() => recordSale('cash')}
-            disabled={loading}
-            className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-3.5 rounded-2xl font-semibold shadow-lg active:scale-95 transition-all"
-          >
-            {loading ? 'Saving...' : 'Cash Sale'}
-          </button>
-          <button
-            onClick={() => recordSale('credit')}
-            disabled={loading}
-            className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-400 text-white py-3.5 rounded-2xl font-semibold shadow-lg active:scale-95 transition-all"
-          >
-            {loading ? 'Saving...' : 'Credit'}
-          </button>
-        </div>
-      )}
+     {/* Action Buttons */}
+{cart.length > 0 && (
+  <div className="fixed bottom-20 left-4 right-4 max-w-md mx-auto flex gap-2 z-20">
+    <button
+      onClick={() => recordSale('cash')}
+      disabled={loading}
+      className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-3.5 rounded-2xl font-semibold text-sm shadow-lg active:scale-95 transition-all"
+    >
+      {loading ? '...' : 'Cash'}
+    </button>
+    <button
+      onClick={() => recordSale('gcash')}
+      disabled={loading}
+      className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white py-3.5 rounded-2xl font-semibold text-sm shadow-lg active:scale-95 transition-all"
+    >
+      {loading ? '...' : 'GCash'}
+    </button>
+    <button
+      onClick={() => recordSale('credit')}
+      disabled={loading}
+      className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-400 text-white py-3.5 rounded-2xl font-semibold text-sm shadow-lg active:scale-95 transition-all"
+    >
+      {loading ? '...' : 'Credit'}
+    </button>
+  </div>
+)}
     </div>
   );
 }
