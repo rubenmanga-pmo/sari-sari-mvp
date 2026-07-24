@@ -48,6 +48,35 @@ export default function Inventory() {
 
   const lowStockCount = products.filter((p) => p.stock <= p.lowStock).length;
 
+  const adjustStock = async (productId: number, currentStock: number, delta: number) => {
+    const newStock = Math.max(0, currentStock + delta);
+    setSaving(true);
+
+    try {
+      const res = await fetch('/api/stock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId, newStock }),
+      });
+
+      if (res.ok) {
+        // Update local state immediately for better UX
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === productId ? { ...p, stock: newStock } : p
+          )
+        );
+      } else {
+        alert('Failed to update stock');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error updating stock');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const addNewProduct = async () => {
     if (!newName.trim()) {
       alert('Please enter product name');
@@ -140,7 +169,7 @@ export default function Inventory() {
                 isLow ? 'border-red-300' : 'border-gray-100'
               }`}
             >
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start mb-3">
                 <div>
                   <div className="font-medium">{product.name}</div>
                   <div className="text-sm text-gray-500">
@@ -150,6 +179,38 @@ export default function Inventory() {
                 <div className={`text-lg font-bold ${isLow ? 'text-red-500' : 'text-gray-800'}`}>
                   {product.stock}
                 </div>
+              </div>
+
+              {/* Stock Adjustment Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => adjustStock(product.id, product.stock, -1)}
+                  disabled={saving || product.stock <= 0}
+                  className="w-10 h-10 rounded-full bg-gray-100 text-xl font-bold disabled:opacity-40"
+                >
+                  −
+                </button>
+                <button
+                  onClick={() => adjustStock(product.id, product.stock, 1)}
+                  disabled={saving}
+                  className="w-10 h-10 rounded-full bg-gray-100 text-xl font-bold disabled:opacity-40"
+                >
+                  +
+                </button>
+                <button
+                  onClick={() => adjustStock(product.id, product.stock, 10)}
+                  disabled={saving}
+                  className="ml-auto px-4 py-2 bg-green-100 text-green-700 rounded-xl text-sm font-medium disabled:opacity-40"
+                >
+                  +10
+                </button>
+                <button
+                  onClick={() => adjustStock(product.id, product.stock, -10)}
+                  disabled={saving || product.stock <= 0}
+                  className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-medium disabled:opacity-40"
+                >
+                  −10
+                </button>
               </div>
             </div>
           );
