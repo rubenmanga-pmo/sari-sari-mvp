@@ -8,13 +8,22 @@ export default function Dashboard() {
     todayTransactions: 0,
     weekSales: 0,
     weekTransactions: 0,
+    monthSales: 0,
+    monthTransactions: 0,
+    ytdSales: 0,
+    ytdTransactions: 0,
+    totalSales: 0,
+    totalTransactions: 0,
     totalCredit: 0,
     lowStockCount: 0,
     totalProducts: 0,
     paymentBreakdown: { cash: 0, gcash: 0, credit: 0 },
+    totalCashIn: 0,
+    totalCashOut: 0,
+    netCash: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'today' | 'week'>('today');
+  const [view, setView] = useState<'today' | 'week' | 'month' | 'ytd' | 'total'>('today');
 
   useEffect(() => {
     fetch('/api/dashboard')
@@ -30,36 +39,51 @@ export default function Dashboard() {
     return <div className="text-center py-16 text-gray-400">Loading...</div>;
   }
 
-  const sales = view === 'today' ? stats.todaySales : stats.weekSales;
-  const transactions = view === 'today' ? stats.todayTransactions : stats.weekTransactions;
+  const getSalesData = () => {
+    switch (view) {
+      case 'today':
+        return { sales: stats.todaySales, transactions: stats.todayTransactions, label: "Today's Sales" };
+      case 'week':
+        return { sales: stats.weekSales, transactions: stats.weekTransactions, label: "This Week's Sales" };
+      case 'month':
+        return { sales: stats.monthSales, transactions: stats.monthTransactions, label: "This Month's Sales" };
+      case 'ytd':
+        return { sales: stats.ytdSales, transactions: stats.ytdTransactions, label: "Year-to-Date Sales" };
+      case 'total':
+        return { sales: stats.totalSales, transactions: stats.totalTransactions, label: "Total Sales (All Time)" };
+      default:
+        return { sales: 0, transactions: 0, label: '' };
+    }
+  };
+
+  const { sales, transactions, label } = getSalesData();
 
   return (
     <div className="space-y-4">
-      {/* Toggle */}
-      <div className="flex bg-white rounded-2xl p-1 shadow-sm">
-        <button
-          onClick={() => setView('today')}
-          className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition ${
-            view === 'today' ? 'bg-green-600 text-white' : 'text-gray-500'
-          }`}
-        >
-          Today
-        </button>
-        <button
-          onClick={() => setView('week')}
-          className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition ${
-            view === 'week' ? 'bg-green-600 text-white' : 'text-gray-500'
-          }`}
-        >
-          This Week
-        </button>
+      {/* Period Toggle */}
+      <div className="flex bg-white rounded-2xl p-1 shadow-sm overflow-x-auto no-scrollbar">
+        {([
+          { key: 'today', label: 'Today' },
+          { key: 'week', label: 'Week' },
+          { key: 'month', label: 'Month' },
+          { key: 'ytd', label: 'YTD' },
+          { key: 'total', label: 'Total' },
+        ] as const).map((item) => (
+          <button
+            key={item.key}
+            onClick={() => setView(item.key)}
+            className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-medium whitespace-nowrap transition ${
+              view === item.key ? 'bg-green-600 text-white' : 'text-gray-500'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
 
       {/* Main Sales Card */}
       <div className="bg-white rounded-2xl p-5 shadow-sm">
-        <p className="text-sm text-gray-500 mb-1">
-          {view === 'today' ? "Today's Sales" : "This Week's Sales"}
-        </p>
+        <p className="text-sm text-gray-500 mb-1">{label}</p>
         <p className="text-3xl font-bold text-green-600">
           ₱{sales.toLocaleString()}
         </p>
@@ -68,10 +92,10 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Payment Breakdown (Week only) */}
+      {/* Payment Breakdown (only for Week view) */}
       {view === 'week' && (
         <div className="bg-white rounded-2xl p-5 shadow-sm">
-          <p className="text-sm text-gray-500 mb-3">Payment Breakdown</p>
+          <p className="text-sm text-gray-500 mb-3">Payment Breakdown (This Week)</p>
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Cash</span>
@@ -88,6 +112,27 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Cash Flow Summary */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm">
+        <p className="text-sm text-gray-500 mb-3">Cash Flow (All Time)</p>
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-600">Total Cash In</span>
+            <span className="font-medium text-green-600">₱{stats.totalCashIn.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-600">Total Cash Out</span>
+            <span className="font-medium text-red-500">₱{stats.totalCashOut.toLocaleString()}</span>
+          </div>
+          <div className="border-t border-gray-100 pt-2 flex justify-between items-center">
+            <span className="text-sm font-medium text-gray-700">Net Cash</span>
+            <span className={`font-bold ${stats.netCash >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+              ₱{stats.netCash.toLocaleString()}
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Outstanding Credit */}
       <div className="bg-white rounded-2xl p-5 shadow-sm">
