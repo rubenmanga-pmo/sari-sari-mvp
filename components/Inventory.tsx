@@ -19,12 +19,14 @@ export default function Inventory() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newPrice, setNewPrice] = useState('');
-  const [newCategory, setNewCategory] = useState('Drinks');
-  const [newStock, setNewStock] = useState('');
-  const [newLowStock, setNewLowStock] = useState('10');
+  // Add / Edit form
+  const [showForm, setShowForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [formName, setFormName] = useState('');
+  const [formPrice, setFormPrice] = useState('');
+  const [formCategory, setFormCategory] = useState('Drinks');
+  const [formStock, setFormStock] = useState('');
+  const [formLowStock, setFormLowStock] = useState('10');
 
   const loadProducts = () => {
     setLoading(true);
@@ -46,6 +48,26 @@ export default function Inventory() {
   );
 
   const lowStockCount = products.filter((p) => p.stock <= p.lowStock).length;
+
+  const openAddForm = () => {
+    setEditingProduct(null);
+    setFormName('');
+    setFormPrice('');
+    setFormCategory('Drinks');
+    setFormStock('');
+    setFormLowStock('10');
+    setShowForm(true);
+  };
+
+  const openEditForm = (product: Product) => {
+    setEditingProduct(product);
+    setFormName(product.name);
+    setFormPrice(String(product.price));
+    setFormCategory(product.category);
+    setFormStock(String(product.stock));
+    setFormLowStock(String(product.lowStock));
+    setShowForm(true);
+  };
 
   const adjustStock = async (productId: number, currentStock: number, delta: number) => {
     const newStock = Math.max(0, currentStock + delta);
@@ -73,45 +95,64 @@ export default function Inventory() {
     }
   };
 
-  const addNewProduct = async () => {
-    if (!newName.trim()) {
+  const saveProduct = async () => {
+    if (!formName.trim()) {
       alert('Please enter product name');
       return;
     }
-    if (!newPrice || isNaN(Number(newPrice))) {
+    if (!formPrice || isNaN(Number(formPrice))) {
       alert('Please enter a valid price');
       return;
     }
 
     setSaving(true);
     try {
-      const res = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newName.trim(),
-          price: Number(newPrice),
-          category: newCategory,
-          stock: Number(newStock) || 0,
-          lowStock: Number(newLowStock) || 10,
-        }),
-      });
+      if (editingProduct) {
+        // Update existing product
+        const res = await fetch('/api/products', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingProduct.id,
+            name: formName.trim(),
+            price: Number(formPrice),
+            category: formCategory,
+            lowStock: Number(formLowStock) || 10,
+          }),
+        });
 
-      if (res.ok) {
-        alert('Product added successfully!');
-        setNewName('');
-        setNewPrice('');
-        setNewCategory('Drinks');
-        setNewStock('');
-        setNewLowStock('10');
-        setShowAddForm(false);
-        loadProducts();
+        if (res.ok) {
+          alert('Product updated successfully!');
+          setShowForm(false);
+          loadProducts();
+        } else {
+          alert('Failed to update product');
+        }
       } else {
-        alert('Failed to add product');
+        // Add new product
+        const res = await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: formName.trim(),
+            price: Number(formPrice),
+            category: formCategory,
+            stock: Number(formStock) || 0,
+            lowStock: Number(formLowStock) || 10,
+          }),
+        });
+
+        if (res.ok) {
+          alert('Product added successfully!');
+          setShowForm(false);
+          loadProducts();
+        } else {
+          alert('Failed to add product');
+        }
       }
     } catch (err) {
       console.error(err);
-      alert('Error adding product');
+      alert('Error saving product');
     } finally {
       setSaving(false);
     }
@@ -139,7 +180,7 @@ export default function Inventory() {
 
       {/* Add Product Button */}
       <button
-        onClick={() => setShowAddForm(true)}
+        onClick={openAddForm}
         className="w-full py-3.5 bg-green-600 text-white rounded-2xl font-medium shadow-sm active:scale-[0.98] transition"
       >
         + Add New Product
@@ -177,6 +218,7 @@ export default function Inventory() {
                 </div>
               </div>
 
+              {/* Action Buttons */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => adjustStock(product.id, product.stock, -1)}
@@ -195,7 +237,7 @@ export default function Inventory() {
                 <button
                   onClick={() => adjustStock(product.id, product.stock, 10)}
                   disabled={saving}
-                  className="ml-auto px-3 py-1.5 bg-green-50 text-green-700 rounded-xl text-sm font-medium disabled:opacity-40"
+                  className="px-3 py-1.5 bg-green-50 text-green-700 rounded-xl text-sm font-medium disabled:opacity-40"
                 >
                   +10
                 </button>
@@ -205,6 +247,12 @@ export default function Inventory() {
                   className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-sm font-medium disabled:opacity-40"
                 >
                   −10
+                </button>
+                <button
+                  onClick={() => openEditForm(product)}
+                  className="ml-auto px-3 py-1.5 bg-blue-50 text-blue-600 rounded-xl text-sm font-medium"
+                >
+                  Edit
                 </button>
               </div>
             </div>
@@ -218,33 +266,35 @@ export default function Inventory() {
         </p>
       )}
 
-      {/* Add Product Modal */}
-      {showAddForm && (
+      {/* Add / Edit Product Modal */}
+      {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50">
           <div className="bg-white w-full max-w-md rounded-t-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-gray-800">Add New Product</h3>
+            <h3 className="text-lg font-bold text-gray-800">
+              {editingProduct ? 'Edit Product' : 'Add New Product'}
+            </h3>
 
             <input
               type="text"
               placeholder="Product Name *"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
               className="w-full p-3.5 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500"
             />
 
             <input
               type="number"
               placeholder="Price *"
-              value={newPrice}
-              onChange={(e) => setNewPrice(e.target.value)}
+              value={formPrice}
+              onChange={(e) => setFormPrice(e.target.value)}
               className="w-full p-3.5 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500"
             />
 
             <div>
               <label className="text-sm text-gray-500 mb-1 block">Category</label>
               <select
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
+                value={formCategory}
+                onChange={(e) => setFormCategory(e.target.value)}
                 className="w-full p-3.5 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 {categories.map((cat) => (
@@ -253,42 +303,37 @@ export default function Inventory() {
               </select>
             </div>
 
-            <input
-              type="number"
-              placeholder="Starting Stock"
-              value={newStock}
-              onChange={(e) => setNewStock(e.target.value)}
-              className="w-full p-3.5 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
+            {!editingProduct && (
+              <input
+                type="number"
+                placeholder="Starting Stock"
+                value={formStock}
+                onChange={(e) => setFormStock(e.target.value)}
+                className="w-full p-3.5 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            )}
 
             <input
               type="number"
               placeholder="Low Stock Alert Level"
-              value={newLowStock}
-              onChange={(e) => setNewLowStock(e.target.value)}
+              value={formLowStock}
+              onChange={(e) => setFormLowStock(e.target.value)}
               className="w-full p-3.5 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500"
             />
 
             <div className="flex gap-3 pt-2">
               <button
-                onClick={() => {
-                  setShowAddForm(false);
-                  setNewName('');
-                  setNewPrice('');
-                  setNewCategory('Drinks');
-                  setNewStock('');
-                  setNewLowStock('10');
-                }}
+                onClick={() => setShowForm(false)}
                 className="flex-1 py-3 bg-gray-100 rounded-2xl font-medium text-gray-700"
               >
                 Cancel
               </button>
               <button
-                onClick={addNewProduct}
+                onClick={saveProduct}
                 disabled={saving}
                 className="flex-1 py-3 bg-green-600 text-white rounded-2xl font-medium disabled:bg-gray-400"
               >
-                {saving ? 'Saving...' : 'Save Product'}
+                {saving ? 'Saving...' : editingProduct ? 'Update Product' : 'Save Product'}
               </button>
             </div>
           </div>
