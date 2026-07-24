@@ -18,6 +18,11 @@ export default function Credit() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // New Customer form
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+
   const loadCustomers = () => {
     setLoading(true);
     fetch('/api/customers')
@@ -64,13 +69,47 @@ export default function Credit() {
         alert(`Bayad na naitala: ₱${amount}`);
         setPaymentAmount('');
         setSelectedCustomer(null);
-        loadCustomers(); // refresh list
+        loadCustomers();
       } else {
         alert('Failed to record payment');
       }
     } catch (err) {
       console.error(err);
       alert('Error recording payment');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addNewCustomer = async () => {
+    if (!newName.trim()) {
+      alert('Please enter customer name');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newName.trim(),
+          phone: newPhone.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        alert('Customer added successfully!');
+        setNewName('');
+        setNewPhone('');
+        setShowAddForm(false);
+        loadCustomers();
+      } else {
+        alert('Failed to add customer');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error adding customer');
     } finally {
       setSaving(false);
     }
@@ -89,6 +128,14 @@ export default function Credit() {
           ₱{totalOutstanding.toLocaleString()}
         </p>
       </div>
+
+      {/* Add Customer Button */}
+      <button
+        onClick={() => setShowAddForm(true)}
+        className="w-full py-3 bg-green-600 text-white rounded-2xl font-medium"
+      >
+        + Add New Customer
+      </button>
 
       {/* Search */}
       <input
@@ -112,6 +159,7 @@ export default function Credit() {
               <div>
                 <div className="font-medium text-lg">{customer.name}</div>
                 <div className="text-sm text-gray-500">
+                  {customer.phone && <span>{customer.phone} · </span>}
                   Last payment: {customer.lastPayment || '—'}
                 </div>
               </div>
@@ -140,6 +188,51 @@ export default function Credit() {
         <p className="text-center text-gray-400 py-10">
           {customers.length === 0 ? 'Walang customers sa Google Sheet' : 'Walang nahanap'}
         </p>
+      )}
+
+      {/* Add Customer Modal */}
+      {showAddForm && (
+        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50">
+          <div className="bg-white w-full max-w-md rounded-t-3xl p-6 space-y-4">
+            <h3 className="text-lg font-bold">Add New Customer</h3>
+
+            <input
+              type="text"
+              placeholder="Customer Name *"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="w-full p-4 text-base border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-green-500"
+            />
+
+            <input
+              type="text"
+              placeholder="Phone (optional)"
+              value={newPhone}
+              onChange={(e) => setNewPhone(e.target.value)}
+              className="w-full p-4 text-base border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-green-500"
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowAddForm(false);
+                  setNewName('');
+                  setNewPhone('');
+                }}
+                className="flex-1 py-3 bg-gray-100 rounded-2xl font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addNewCustomer}
+                disabled={saving}
+                className="flex-1 py-3 bg-green-600 text-white rounded-2xl font-medium disabled:bg-gray-400"
+              >
+                {saving ? 'Saving...' : 'Save Customer'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Payment Modal */}
