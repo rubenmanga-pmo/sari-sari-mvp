@@ -163,3 +163,42 @@ export async function recordPayment(payment: {
 
   return { success: true };
 }
+export async function getDashboardStats() {
+  // Get total outstanding credit
+  const customers = await getCustomers();
+  const totalCredit = customers.reduce((sum, c) => sum + c.balance, 0);
+
+  // Get today's sales
+  const salesResponse = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'Sales!A2:J',
+  });
+
+  const salesRows = salesResponse.data.values || [];
+  const today = new Date().toISOString().split('T')[0];
+
+  let todaySales = 0;
+  let todayTransactions = 0;
+
+  salesRows.forEach((row) => {
+    const saleDate = row[1] ? row[1].substring(0, 10) : '';
+    const total = Number(row[6]) || 0;
+
+    if (saleDate === today) {
+      todaySales += total;
+      todayTransactions += 1;
+    }
+  });
+
+  // Low stock count
+  const products = await getProducts();
+  const lowStockCount = products.filter((p) => p.stock <= p.lowStock).length;
+
+  return {
+    todaySales,
+    todayTransactions,
+    totalCredit,
+    lowStockCount,
+    totalProducts: products.length,
+  };
+}
